@@ -7,6 +7,7 @@
 !setup.cfg
 *.orig
 *.log
+*.bak
 *.pot
 __pycache__/*
 .cache/*
@@ -52,3 +53,4 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
+pub_games.json.bak
