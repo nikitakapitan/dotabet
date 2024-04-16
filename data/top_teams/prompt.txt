@@ -1,0 +1,58 @@
+I have features_csv_path = r"D:\WORKSPACE\dotabet\data\top_teams\features.csv" file with matches-players data in the format:
+
+player_name	missing_data	player_team_name	player_team_id	match_id	start_time	league_name	account_id
+ulnit	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	109757023
+supream	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	58513047
+chirajunior	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	312436974
+arriverderci	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	171097887
+respect	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	123787715
+force	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	146711951
+narman	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	343084576
+cloud	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	168126336
+swedenstrong	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	175311897
+bengan	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	48823667
+arriverderci	0	1win	9255039	7660470000	2024-03-29 12:37:46	Portal Dota2 World Invitationals	171097887
+cloud	0	1win	9255039	7660470000	2024-03-29 12:37:46	Portal Dota2 World Invitationals	168126336
+...
+
+I also have teams_csv_path = "D:\WORKSPACE\dotabet\constants\teams.csv" with the current composition of teams in the format:
+Team Name	Team ID	Pos1	Pos1ID	Pos2	Pos2ID	Pos3	Pos3ID	Pos4	Pos4ID	Pos5	Pos5ID	unique_team_id
+BetBoom Team	8255888	Nightfall	124801257	gpk	480412663	MieRo`	165564598	Save-	317880638	TORONTOTOKYO	431770905	1520430061
+Xtreme Gaming	8261500	Ame	898754153	Xm	137129583	Xxs	129958758	XinQ	157475523	Dy	143693439	1467011456
+Gaimin Gladiators	8599101	dyrachyo	116934015	Quinn	221666230	Ace	97590558	tOfu	16497807	Seleri	91730177	544418787
+Team Falcons	9247354	skiter	100058342	Malr1ne	898455820	ATF	183719386	Cr1t-	25907144	Sneyking	10366616	1218507308
+Natus Vincere	36	Yuragi	167976729	sanctity-	392169957	nefrit	116249155	W_Zayac	111030315	Malady	93817671	881243827
+Aurora.1xBet	9255706	23	375507918	lorenof	210053851	Jabz	100471531	Q	193815691	Oli	101259972	981108963
+
+---
+
+
+
+
+
+
+Create teams.csv from features.csv:
+
+I have features_csv_path = r"D:\WORKSPACE\dotabet\data\top_teams\features.csv" file with matches-players data in the format:
+
+player_name	missing_data	player_team_name	player_team_id	match_id	start_time	league_name	account_id
+ulnit	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	109757023
+supream	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	58513047
+chirajunior	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	312436974
+arriverderci	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	171097887
+respect	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	123787715
+force	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	146711951
+narman	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	343084576
+cloud	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	168126336
+swedenstrong	0	1win	9255039	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	175311897
+bengan	0	MOUZ	9338413	7660569603	2024-03-29 13:47:42	Portal Dota2 World Invitationals	48823667
+arriverderci	0	1win	9255039	7660470000	2024-03-29 12:37:46	Portal Dota2 World Invitationals	171097887
+cloud	0	1win	9255039	7660470000	2024-03-29 12:37:46	Portal Dota2 World Invitationals	168126336
+...
+
+Write the the function that given this csv will create team_composition.csv with header:
+Team Name	Team ID	Pos1	Pos1ID	Pos2	Pos2ID	Pos3	Pos3ID	Pos4	Pos4ID	Pos5	Pos5ID	unique_team_id
+
+It should iterate over features.csv and continuously fill the new team_compositions.csv file.
+1. read player_team_id. If the row row
+
