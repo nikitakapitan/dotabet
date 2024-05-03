@@ -171,7 +171,7 @@ def copy_to_drive(output_file, gdrive_path):
     except Exception as e:
         print(f"Error occurred: {e}")
 
-def remove_all(folder_path):
+def remove_files_only(folder_path):
     # List all files in the given folder
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)

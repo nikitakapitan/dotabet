@@ -39,7 +39,7 @@ def scrape_dota2_odds():
     today_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
     
     # Initialize CSV file writing
-    with open(r"D:\WORKSPACE\dotabet\notebooks\parse_web\betting_odds.csv", mode='a', newline='', encoding='utf-8') as file:
+    with open(r"G:\My Drive\dotabet\odds\bovada_odds.csv", mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         if file.tell() == 0:
             writer.writerow(['Date', 'League Name', 'Team 1', 'Odd 1', 'Team 2', 'Odd 2', "Match Date"])
