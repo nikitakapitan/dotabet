@@ -3,30 +3,51 @@ import os
 import requests
 import json
 import csv
+import shutil
+import dotabet
+
+class PlayerRankLess80Error(Exception):
+    """Exception raised for invalid player names."""
+
+    def __init__(self, name, message="Player Rank is Less than 80"):
+        self.name = name
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return f'{self.name} : {self.message}'
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 ############### TEAMS ##############
-team_mapping_file = os.path.join(PROJECT_ROOT, 'constants', "team_mapping.yaml")
+teams_path = r"D:\WORKSPACE\dotabet\constants\teams.csv"
 
 def get_team_name(id):
-    if not hasattr(get_team_name, "team_id2name"):
-        with open(team_mapping_file, "r") as file:
-            team_id2name = yaml.safe_load(file)
-        team_name2id = {name: team_id for team_id, name in team_id2name.items()}
-        get_team_name.team_id2name = team_id2name
-        get_team_name.team_name2id = team_name2id
+    response = requests.get(f"https://api.opendota.com/api/teams/{id}")
+    if response.status_code == 200:
+        data = response.json()
         
-    return get_team_name.team_id2name[id]
+        if data['name']:
+            return data['name']
+        elif data['tag']:
+            return data['tag']        
+    return None
 
 def get_team_id(name):
-    if not hasattr(get_team_name, "team_name2id"):
-        with open(team_mapping_file, "r") as file:
-            team_id2name = yaml.safe_load(file)
-        get_team_name.team_id2name = team_id2name
-        get_team_name.team_name2id = {name: team_id for team_id, name in team_id2name.items()}
-        
-    return get_team_name.team_name2id.get(name)
+    with open(teams_path, "r", newline='') as file:
+        csv_reader = csv.DictReader(file)
+        for row in csv_reader:
+            if format_team_name(row['team_name']) == format_team_name(name):
+                return row['team_id']
+    return None
+
+def get_team_rating(name):
+    team_id = get_team_id(name)
+    if team_id:
+        endpoint = f"https://www.opendota.com/api/teams/{team_id}"
+        rating = dotabet.fetch.fetch_data(endpoint)['rating']
+        return rating
+
 
 
 ################ LEAGUES ###########
@@ -87,14 +108,20 @@ def fetch_player_name(player_id):
     response = requests.get(f"https://api.opendota.com/api/players/{player_id}")
     if response.status_code == 200:
             data = response.json()
-            if data['rank_tier'] >= 80:
-                return data['profile']['personaname']
+            
+            if not data['rank_tier']:
+                print(f"⚠️ {player_id=} has no rank")
+            elif data['rank_tier'] < 80:
+                raise PlayerRankLess80Error(data['profile']['personaname'], f"❌ {player_id=} rank less than 80 : rank={data['rank_tier']}") 
+            return data['profile']['personaname']
+            
 
 def fetch_league_name(league_id):
     response = requests.get(f"https://api.opendota.com/api/leagues/{league_id}")
     if response.status_code == 200:
             data = response.json()
             return data['name']
+
 
 
 def get_player_id(name):
@@ -111,45 +138,38 @@ def get_player_id(name):
         print(f"No ID found for {name=}")
 
 
-###################### DATA TRANSFORM #############
-
-
-
-def flatten_dict(d, parent_key='', sep='.'):
-    keys2skip = "lose multi_kills kill_streaks patch radiant_win win benchmarks buyback_count cluster creeps_stacked firstblood_claimed \
-    kills_per_min lane_efficiency_pct kills lane_kills life_state_dead rank_tier ".split()
-    
-    items = []
-    for k, v in d.items():
-        if k in keys2skip:
-            continue
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        elif isinstance(v, list):
-            if new_key.split(sep)[-1] in ['gold_t','lh_t','xp_t', 'radiant_gold_adv', 'radiant_xp_adv']:
-                items.append((new_key,v))
-            else:
-                for i, item in enumerate(v):
-                    if isinstance(item, dict):
-                        if new_key == 'picks_bans':
-                            action = 'pick' if item['is_pick'] else 'ban'
-                            items.append((f"team{item['team']}{sep}{action}{item['order']}", item['hero_id']))
-                        else:
-                            items.extend(flatten_dict(item, f"{new_key}{sep}{i}", sep=sep).items())
-                    else:
-                        items.append((f"{new_key}{sep}{i}", item))
-        else:
-            items.append((new_key, v))
-    return dict(items)
-
-########################### DATA FORMAT ####################
 import re
 
 def format_player_name(name):
     # Cast player name Avatar1k\u963F\u53D1!@# -> avatar1k
     formatted_name = re.sub(r'[^a-z1-9]', '', name.lower())  # Lowercase and remove unwanted symbols
     return formatted_name
+
+from datetime import datetime
+def cast_seconds_to_datetime(seconds):
+    return datetime.utcfromtimestamp(seconds).date()
+def cast_seconds_to_ymd(seconds):
+    return datetime.utcfromtimestamp(seconds).strftime('%Y-%m-%d')
+def cast_ymd_to_datetime(ymd_str):
+    return datetime.strptime(ymd_str, '%Y-%m-%d')
+def cast_datetime_to_ymd(dt):
+    return dt.strftime('%Y-%m-%d')
+
+def format_team_name(name):
+    dct = {"g2.ig" : "g2 x ig",
+          "bb" : "betboom",}
+    if not name:
+        return None
+    name = name.lower()
+    for w in ['team', 'esports', '1xbet', 'ray', 'gaming', ]:
+        name = name.replace(w, '')
+    name = name.replace('.', ' ')
+    name = name.strip()
+    if name in dct:
+        return dct[name]
+    return name
+
+
 
 
 ################### GOOGLE DRIVE ##############
@@ -176,7 +196,7 @@ def remove_files_only(folder_path):
     for filename in os.listdir(folder_path):
         file_path = os.path.join(folder_path, filename)
         try:
-            if os.path.isfile(file_path):
+            if os.path.isfile(file_path) and (filename.endswith('.json') or filename.endswith('.csv')):
                 os.unlink(file_path)  
         except Exception as e:
             print(f'Failed to delete {file_path}. Reason: {e}')
@@ -202,10 +222,89 @@ def get_merged_data(file_paths):
             combined_data.extend(data)
     return combined_data
 
-def get_teams_ids(teams_csv_path):
+def get_teams_ids(teams_csv_path, top_teams=False, return_as_dict_with_top=False):
+    team_ids = set()
+    team_ids_top = {}
+    with open(teams_csv_path, 'r', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if top_teams and not row['top']=='1':
+                continue
+            team_id = int(row['team_id'])
+            team_ids.add(team_id)
+            team_ids_top[team_id] = bool(int(row['top']))
+
+    return team_ids_top if return_as_dict_with_top else team_ids
+
+def get_teams_composition_ids(teams_csv_path, top=False):
     team_ids = set()
     with open(teams_csv_path, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            team_ids.add(int(row['Team ID']))
+            if row['team_composition_id']: # avoid int('') error
+                if top and not row['top']=='1':
+                    continue
+                team_ids.add(int(row['team_composition_id']))
     return team_ids
+
+def get_team_composition_id(team_id):
+    with open(teams_path, 'r', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            if int(row['team_id']) == team_id: 
+                if row['team_composition_id']: # avoid int('') error
+                    return int(row['team_composition_id'])
+
+def get_account_ids(accounts_csv_path):
+    account_ids = set()
+    with open(accounts_csv_path, 'r', newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
+        # Define the columns to extract the IDs from
+        id_columns = ['Pos1ID', 'Pos2ID', 'Pos3ID', 'Pos4ID', 'Pos5ID']
+        for row in reader:
+            # Loop through each specified column and add the ID to the set
+            for column in id_columns:
+                if row[column]:  # Check if the column is not empty
+                    account_ids.add(int(row[column]))
+    return account_ids
+
+# MERGE (without very last match, to keep tmp file non-empty)
+
+def merge_fetched_data(tmp_file, file_to_merge):
+    message = []
+
+    # file_to_merge = r"D:\WORKSPACE\dotabet\data\1pro_games_2.json"
+    # tmp_file = r"D:\WORKSPACE\dotabet\data\1pro_games_tmp.json"
+    
+    directory = os.path.dirname(file_to_merge)
+    backup_file = os.path.join(directory, 'backup_' + os.path.basename(file_to_merge))
+    shutil.copyfile(file_to_merge, backup_file)
+    
+    with open(file_to_merge, 'r', encoding='utf-8') as file:
+            data1 = json.load(file)
+        
+    mids1 = {m['match_id'] for m in data1}
+    
+    with open(tmp_file, 'r', encoding='utf-8') as file:
+            data_tmp = file.read()
+            data_tmp = '[' + data_tmp[:-1] + ']'
+            data_tmp = json.loads(data_tmp)
+
+    filtered_data_tmp = []
+    for match_tmp in data_tmp:
+        if match_tmp['match_id'] in mids1:
+            print(f"❌ Match {match_tmp['match_id']} from {tmp_file} is already present in {file_to_merge}")
+        else:
+            filtered_data_tmp.append(match_tmp)
+
+    assert filtered_data_tmp[0] not in mids1, "For some reasons, the buffer tmp match was previously merged into files"
+    with open(file_to_merge, 'w') as file:
+        json.dump(data1 + [filtered_data_tmp[0]] + filtered_data_tmp[2:], file, separators=(',', ':'))
+    
+    json_string = json.dumps(data_tmp[1], ensure_ascii=False, separators=(',', ': '), default=lambda x: None if x is None else str(x).lower())
+    with open(tmp_file, 'w') as file:
+        file.write(json_string+',')
+    message += [f"Merged new {len(data_tmp)-1} matches >> {os.path.basename(file_to_merge)}({len(data1)} matches). Total matches : {len(data_tmp)-1+len(data1)}\n"]
+    buffer_date = datetime.utcfromtimestamp(data_tmp[1]['start_time'])
+    message += [f"Latest match: tmp 1️⃣ buffer match: {data_tmp[1]['match_id']} ({buffer_date.strftime('%d %B %Y %H:%M')})"]
+    return message

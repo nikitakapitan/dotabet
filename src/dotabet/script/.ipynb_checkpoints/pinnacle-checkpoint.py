@@ -1,11 +1,14 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 import time
 from datetime import datetime, timedelta
+import locale
 import csv
 import os
+import dotabet
 
 def data_exists_in_csv(filename, data):
     with open(filename, mode='r', newline='') as file:
@@ -26,84 +29,93 @@ def append_to_csv(filename, data):
             writer.writerow(data)
         return True
     else:
-        print("❗Data already exist in CSV")
+        print("❗Data already exist in CSV: ")
         return False
 
-def scrape_dota2_odds():
-    telegram_msg = ["New match parsed:"]
-    
-    odds_file = r"D:\WORKSPACE\dotabet\data\odds\pinnacle.csv"
-    if not os.path.isfile(odds_file):
-        with open(odds_file, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            header = ["Match_Date", "League_Name", "Team_1", "Odd_1", "Team_2", "Odd_2"]
-            writer.writerow(header)
-    
+def get_date_ymd(block):
     today = datetime.today()
-    today_date = today.strftime('%Y-%m-%d')
     tommorow_date = today + timedelta(days=1)
     
-    # Initialize WebDriver
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-    
-    try:
-        # Navigate to the webpage
-        driver.get("https://www.pinnacle.com/en/esports/games/dota-2/matchups")
-    
-        # Allow some time for the page to load
-        time.sleep(5)  # Adjust time based on your internet speed
-    
-        # Find all content blocks that might contain match details for Today or Tomorrow
-        date_blocks = driver.find_elements(By.CSS_SELECTOR, "div.contentBlock.square > div.contentBlock.square")
-    
-        for date_block in date_blocks:
-            # Extract the date (e.g., Today, Tomorrow)
-            date = date_block.find_element(By.CSS_SELECTOR, "div.style_dateBar__1adEH").text.split(' ')[0]
-            if date.split('\n')[0] == "TODAY":
-                date_ymd = today_date
-            elif date.split('\n')[0] == "TOMMOROW":
-                date_ymd = tommorow_date
-            else:
-                date_ymd = None
-            
-            # Find all league blocks within the date block
-            league_blocks = date_block.find_elements(By.CSS_SELECTOR, "div.style_row__yBzX8.style_row__3l5MS")
-    
-            for league_block in league_blocks:
-                # Extract the league name
-                league_name = league_block.find_element(By.CSS_SELECTOR, "div.style_metadata__3MrIC > a > span").text
-    
-                # Extract match rows within the league block
-                match_blocks = league_block.find_elements(By.XPATH, "following-sibling::div")
-    
-                for match in match_blocks:
-                    # Stop if we hit another league block or end of date section
-                    if match.get_attribute("class") == "style_row__yBzX8 style_row__3l5MS":
-                        break
-    
-                    # Filter only rows with '(Match)' in the participant name
-                    participants = match.find_elements(By.CSS_SELECTOR, "div.style_gameInfoLabel__2m_fI > span")
-                    match_info = [p.text for p in participants if '(Match)' in p.text]
-    
-                    if match_info:
-                        # Extract Money Line odds
-                        money_line_buttons = match.find_elements(By.CSS_SELECTOR, "div.style_moneyline__2xTld > div > button")
-                        odds = [btn.find_element(By.CSS_SELECTOR, "span.style_price__3Haa9").text for btn in money_line_buttons]
+    date = block.text
+    if date.split(' ')[0].split('\n')[0] == "TODAY":
+        date_ymd = today.strftime('%Y-%m-%d')
+    elif date.split(' ')[0] == "TOMORROW":
+        date_ymd = tommorow_date.strftime('%Y-%m-%d')
+    else:
+        locale.setlocale(locale.LC_ALL, 'en_US')
+        date_ymd = date_object = datetime.strptime(date, "%a, %b %d, %Y").strftime('%Y-%m-%d')
+        print(f"Casting {date} -> {date_ymd}") 
+    return date_ymd
 
-                        team1, odd1 = match_info[0].split(' (Match)')[0], odds[0]
-                        team2, odd2 = match_info[1].split(' (Match)')[0], odds[1]
-                        data = [date_ymd, league_name, team1, odd1, team2, odd2]
-                        
-                        print(f"{date_ymd=}\n {league_name=}\n {team1=} {odd1=} \n {team2=} {odd2=}\n----------\n")
-                        
-                        if append_to_csv(odds_file, data):
-                            telegram_msg.append(f"🆕✅New:{data}")
-                        else:
-                            telegram_msg.append(f"🔄exist: {data}")
-                        
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    finally:
-        # Clean up: close the browser
-        driver.quit()
+def get_match_odds(block):
+    participants = block.find_elements(By.CSS_SELECTOR, "div.style_gameInfoLabel__2m_fI > span")
+    team_names = [p.text for p in participants if '(Match)' in p.text or '(Map 1)' in p.text]
+    for p in participants:
+        if '(Match)' in p.text:
+            odd_type = '(Match)'
+        elif '(Map 1)' in p.text:
+            odd_type = '(Map 1)' 
+
+    if team_names:
+        money_line_buttons = block.find_elements(By.CSS_SELECTOR, "div.style_moneyline__2xTld > div > button")
+        odds = []
+        for btn in money_line_buttons:
+            try:
+                price_span = btn.find_element(By.CSS_SELECTOR, "span.style_price__3Haa9")
+                odds.append(price_span.text)
+            except NoSuchElementException:
+                odds.append(None)
+            
+        team1, odd1 = team_names[0].split(odd_type)[0].strip(), odds[0]
+        team2, odd2 = team_names[1].split(odd_type)[0].strip(), odds[1]
+        team1, team2 = map(dotabet.utils.format_team_name, (team1, team2))
+        rating1 = dotabet.utils.get_team_rating(team1)
+        rating2 = dotabet.utils.get_team_rating(team2)
+            
+        return [team1, odd1, team2, odd2, odd_type, rating1, rating2]
+
+def scrape_dota2_odds(debug=False):
+    telegram_msg = []
+    odds_file = r"D:\WORKSPACE\dotabet\data\odds\pinnacle.csv"
+    
+    
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    driver.get("https://www.pinnacle.com/en/esports/games/dota-2/matchups")
+    time.sleep(5) 
+
+    square = driver.find_element(By.CSS_SELECTOR, "div.contentBlock.square > div.contentBlock.square")
+    content_blocks = square.find_elements(By.CSS_SELECTOR, "div[class^='style_']")
+
+    attributes = ['style_dateBar__1adEH', 'style_row__yBzX8 style_row__3l5MS', 'style_row__yBzX8 style_row__12oAB']
+    content_blocks = [cb for cb in content_blocks if cb.get_attribute("class") in attributes]
+    n = len(content_blocks)
+
+    for i, block in enumerate(content_blocks):
+        if block.get_attribute("class") == 'style_dateBar__1adEH': # TODAY, TOMMOROW or DATE
+            date_ymd = get_date_ymd(block)
+            print(f"block[{i}/{n}]=Match_date: {date_ymd}")
+            continue
+        elif block.get_attribute("class") == "style_row__yBzX8 style_row__3l5MS": # LEAGUE NAME
+            league_name = block.find_element(By.CSS_SELECTOR, "div.style_metadata__3MrIC > a > span").text
+            print(f"block[{i}/{n}]=League_name: {league_name}")
+            continue
+        elif block.get_attribute("class") == "style_row__yBzX8 style_row__12oAB": # MATCH ODDS
+            odd_data = get_match_odds(block)
+            if odd_data and odd_data[1]: # (Match) or (Map 1) and non-empty
+                data = [date_ymd, league_name] + odd_data + [None, None] # None for eloc1, eloc2 to pinnacle.csv
+                if append_to_csv(odds_file, data):
+                    telegram_msg.append(f"\n✅New:{data}")
+                else:
+                    telegram_msg.append("🔄")
+                print(f"block[{i}/{n}]=Match_odds: {data=}")
+            elif odd_data and not odd_data[1]: # (Match) but empty odds
+                print(f"block[{i}/{n}] = (Match) but blocked odds🚫")
+                telegram_msg.append("🚫")
+            else:
+                print(f"block[{i}/{n}]=<Skip non-(Match)> ")
+        else:
+            unknown_block = block.get_attribute("class")
+            print(f"block {i}/{n} Unknown {unknown_block}")
+    driver.quit()
     return telegram_msg
+                

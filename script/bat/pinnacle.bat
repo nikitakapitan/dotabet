@@ -1,0 +1,3 @@
+@echo off
+echo Parsing dota 2 odds ...
+python D:\WORKSPACE\dotabet\script\dotabet_manager.py scrape_odds

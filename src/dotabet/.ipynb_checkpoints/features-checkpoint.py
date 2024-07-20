@@ -31,7 +31,7 @@ def process_time_series(df):
     df = df.drop(columns=time_series_columns)
     return df
 
-def generate_team_composition_text(team_data):
+def generate_team_composition_text(team_data, nb_char=4):
     try:
         # Temporarily create a copy with sorted player positions
         # Handling non-integer positions by converting them to NaN which are sorted first
@@ -40,17 +40,18 @@ def generate_team_composition_text(team_data):
         sorted_team_data = temp_team_data.sort_values(by='player_position', na_position='first')
         
         # Extracting first four letters of 'player_name' and joining them with hyphens
-        team_composition = '-'.join(sorted_team_data['player_name'].str[:4])
+        team_composition = '-'.join(sorted_team_data['player_name'].str[:nb_char])
     except Exception as e:
         print(f"features.py Error generating team composition: {e}")
         team_composition = ""
     return team_composition
 
-def add_team_composition_info(df):
+def add_team_composition_and_matchup_info(df):
     df['account_id'] = df['account_id'].astype('int64')
     
     for match_id, match_data in df.groupby('match_id'):
         team_ids = match_data['player_team_id'].unique()
+        df.loc[(df['match_id'] == match_id), 'teams_matchup_id'] = team_ids.sum()
         for team_id in team_ids:
             team_data = match_data[match_data['player_team_id'] == team_id]
             
@@ -62,18 +63,19 @@ def add_team_composition_info(df):
 def find_player_position(account_id, player_team_id):
     
     # Filter the teams dataframe for the current player's team
-    team_row = teams_df[teams_df['Team ID'] == player_team_id]
+    team_row = teams_df[teams_df['team_id'] == player_team_id]
 
     # If team_row is empty, the team was not found
     if team_row.empty:
-        return 100_001 # "No team in CSV"
+        return 404_040 # "Not found team in CSV"
 
     # Check each position column for the account_id
     for pos in ['Pos1ID', 'Pos2ID', 'Pos3ID', 'Pos4ID', 'Pos5ID']:
         if account_id in team_row[pos].values:
             # Return the position number (extracted from the column name)
             return int(pos[3])  # extract n from Pos{n}ID
-    return 100_002 # "No Up to Date Player" # this player doesn't currently play in the team
+    
+    return account_id # "No Up to Date Player" # this player doesn't currently play in the team
 
 def make_features(input_file_path, output_file_path):
 
@@ -81,6 +83,7 @@ def make_features(input_file_path, output_file_path):
     
     df = process_time_series(df)
     df['player_position'] = df.apply(lambda row: find_player_position(row['account_id'], row['player_team_id']), axis=1).astype(int)
-    df = add_team_composition_info(df)
+    df = add_team_composition_and_matchup_info(df)
+    df = df.sort_values(by='start_time', ascending=False) # sanity sort
 
     df.to_csv(output_file_path, index=False)

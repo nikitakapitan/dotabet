@@ -15,4 +15,5 @@ except PackageNotFoundError:  # pragma: no cover
 finally:
     del version, PackageNotFoundError
 
-from dotabet import utils, filter, features, fetch, csv, consistency, cleanup, groupby
+from dotabet import utils, filter, features, fetch, make_csv, cleanup, groupby, league, cumsum, transform, plot, checkout, vizual
+from dotabet.consistency import main

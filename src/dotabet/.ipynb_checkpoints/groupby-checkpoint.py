@@ -2,8 +2,11 @@ import pandas as pd
 import dotabet
 import os
 
+# if groupby == 'team_composition_id' ----> ONLY player_lvl_featuers
 player_lvl_featuers = ['account_id', 'player_name', 'hero_id', 'player_position']
-team_lvl_features = ['player_team_name', 'team_composition', 'player_team_id', 'team_composition_id', 'win',]
+# if groupby == 'match_id' ---> player_lvl_featuers + team_lvl_features
+team_lvl_features = ['player_team_name', 'team_composition', 'win', 'player_team_id', 'team_composition_id',]  
+# if ...
 match_lvl_features = ['match_id', 'start_time', 'league_name', 'radiant_name', 'dire_name', 'radiant_team_id', 'dire_team_id']
 
 numeric_features = ['actions_per_min', 'ancient_kills', 'assists', 'camps_stacked', 'deaths', 'denies', 'gold_per_min', 
@@ -34,31 +37,91 @@ def groupby_matches_and_teams(features_csv_path):
     df.to_csv(os.path.join(dir_name, os.path.splitext(file_name)[0] + '_by_matches_and_teams.csv'))
     return df
 
-
-def groupby_team_composition(features_csv_path):
+def groupby_team_composition(features_csv_path, teams_csv_path=None):
+    # if teams_csv_path provided => return only current teams
 
     df = pd.read_csv(features_csv_path)
+    if teams_csv_path: # filter by current teams only
+        const_teams_df = pd.read_csv(teams_csv_path)
+        df = df[df['team_composition_id'].isin(const_teams_df['team_composition_id'].values)]
+        
+    teams = _groupby_team_composition(df)
+    teams = teams.sort_values(by=['win', 'player_team_id'])
+
+    new_filename = "composed_teams.csv"
+    teams.to_csv(os.path.join(os.path.dirname(features_csv_path), new_filename))
+    print(f"Created: {new_filename}")
+
+def _groupby_team_composition(df):
     df = df[team_lvl_features + numeric_features]
+
+    # str_agg = lambda x: x.mode()[0] if not x.empty else None
+    # agg_dict = {col: 'mean' for col in df.select_dtypes(include=['int', 'float']).columns}  
+    # agg_dict.update({col: str_agg for col in df.select_dtypes(include=['object']).columns}) 
+    agg_dict = get_agg_dict(df, groupby_columns=['team_composition_id', 'win'], ignore_columns=player_lvl_featuers)
+    
+    teamsgr = df.groupby(['team_composition_id', 'win']) 
+    teams = teamsgr.agg(agg_dict)
+    teams['match_count'] = teamsgr.size() //5
+
+    teams.reset_index(drop=True, inplace=True)
+    teams = teams.reindex(columns=['match_count'] + team_lvl_features + numeric_features)
+    return teams
+
+def groupby_account(features_csv_path, teams_csv_path=None):
+    # if teams_csv_path provided => return only current teams
+
+    df = pd.read_csv(features_csv_path)
+    if teams_csv_path: 
+        account_ids = dotabet.utils.get_account_ids(teams_csv_path)
+        df = df[df['account_id'].isin(account_ids)]
+        
+    players = _groupby_account(df)
+
+    new_filename = "players.csv"
+    players.to_csv(os.path.join(os.path.dirname(features_csv_path), new_filename))
+    print(f"Created: {new_filename}")
+
+def _groupby_account(df):
+    df = df[['account_id', 'player_name'] + ['win', 'team_composition', 'team_composition_id'] + numeric_features]
 
     str_agg = lambda x: x.mode()[0] if not x.empty else None
     agg_dict = {col: 'mean' for col in df.select_dtypes(include=['int', 'float']).columns}  
     agg_dict.update({col: str_agg for col in df.select_dtypes(include=['object']).columns}) 
+
+    accountsgr = df.groupby(['account_id', 'team_composition_id', 'win'])
+    players = accountsgr.agg(agg_dict)
+    players.insert(loc=0, column='match_count', value=accountsgr.size()) 
+
+    players.reset_index(drop=True, inplace=True)
+    return players
     
-    teamsgr = df.groupby('team_composition_id') 
-    teams = teamsgr.agg(agg_dict)
-    teams['match_count'] = teamsgr.size() //5
 
-    teams = teams.reindex(columns=str_col_to_keep + ['match_count'] + num_col_to_keep)
-    teams.reset_index(drop=True, inplace=True)
-    teams = teams.sort_values(by='player_team_id', ascending=False)
-    teams.to_csv(os.path.join(os.path.dirname(features_csv_path), "composed_teams.csv"))
+def dotabet_aggregator(series, ignore_columns):
+    if series.name in ignore_columns:
+        return "DUMMY"
+    elif pd.api.types.is_numeric_dtype(series):
+        return series.mean()
+    elif pd.api.types.is_string_dtype(series):  # Assuming string columns have dtype 'object'
+        if len(series.unique()) > 1:
+            raise ValueError(f"Inconsistent values found in {series.name}: {series.unique()}")
+        return series.iloc[0]
+    else:
+        if len(series.unique()) > 1:
+            raise ValueError(f"Inconsistent values found in {series.name=} ({series.dtype=}) : {series.unique()}")
+        return series.iloc[0]
 
-def groupby_players(features_csv_path):
-    str_col_to_drop = ['start_time', 'league_name', ]
-    num_col_to_drop = ['leagueid', 'hero_id', 'account_id', 'match_id']
-    
-    df = pd.read_csv(features_csv_path)
-    df = df.drop(columns=num_col_to_drop)
+def get_agg_dict(df, groupby_columns, ignore_columns):
+    """Return the rule on how to aggregate df:
+    - float or int -> MEAN
+    - object (str) -> iloc[0] (+ unique check)
+    - else -> iloc[0]
+    """
+    agg_dict = {}
+    for col in df.columns:
+        if col in groupby_columns:
+            continue  # Skip the grouping column
+        agg_dict[col] = lambda x : dotabet_aggregator(x, ignore_columns)
+    return agg_dict
 
-    # TODO
 

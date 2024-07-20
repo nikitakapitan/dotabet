@@ -1,0 +1,3 @@
+@echo off
+echo Get new recent matches from API ...
+python D:\WORKSPACE\dotabet\script\dotabet_manager.py get_new

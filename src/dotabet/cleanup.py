@@ -15,6 +15,7 @@ def find_nan(df):
 
     return dict(nan_match_ids)
 
+
 def find_more60_minutes_match(df):
     more60_match_ids = defaultdict(list)
     column = "more60"
@@ -100,13 +101,12 @@ def compute_invalid_ids_and_print(clean_details):
 def keep_only_top_teams(df, teams_csv_path):
     team_ids = dotabet.utils.get_teams_ids(teams_csv_path)
     total_unique = df['match_id'].nunique()
-    assert len(df)%10==0, 'all_player_csv doesnt matches do not have strictly 10 rows for each match'
+    assert len(df)%10==0, f'all_player_csv matches do not have strictly 10 rows for each match {len(df)=}'
     
     sliced_df = df[df['player_team_id'].isin(team_ids)]
-    sliced_unique = sliced_df['match_id'].nunique()
-    assert len(sliced_df)%5==0, 'non-top teams didnt have exactly 5 rows for each match'
+    assert len(sliced_df)%5==0, 'top teams didnt have exactly 5 rows for each match'
 
-    print(f"(filter) Removed non-csv teams: {(total_unique - sliced_unique)}/{total_unique} matches doesnt have opponent")
+    print(f"(filter) Removed non-csv teams: {(len(df) - len(sliced_df))//5}/{total_unique} matches have a non-top opponent")
     return sliced_df
 
 def get_match_minutes(element):
@@ -114,6 +114,7 @@ def get_match_minutes(element):
         return len(eval(element))
     else:
         return 0
+
 
 ##### main 2 level clean function #####
 def clean(all_player_csv_path, all_player_clean_csv_path, teams_csv_path):

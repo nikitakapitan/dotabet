@@ -1,0 +1,3 @@
+@echo off
+echo Link match results ...
+python D:\WORKSPACE\dotabet\script\dotabet_manager.py link
