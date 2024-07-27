@@ -4,6 +4,12 @@ import pandas as pd
 import dotabet
 
 def _check_team_names_in_teams_csv_match_team_name_in_recent_features_data(teams_df, features_df, logs):
+    """
+    teams_df : df from "D:\WORKSPACE\dotabet\constants\teams.csv"
+    >>> Loop over rows in teams_df
+    1. check if team_id (teams_df) exists in features_df
+    2. check if team_name (teams_df) matches team_name (features_df)
+    """
 
     overall_consistency = True
     for _, row in teams_df.iterrows():

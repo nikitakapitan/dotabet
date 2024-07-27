@@ -87,3 +87,5 @@ def make_features(input_file_path, output_file_path):
     df = df.sort_values(by='start_time', ascending=False) # sanity sort
 
     df.to_csv(output_file_path, index=False)
+
+    return df

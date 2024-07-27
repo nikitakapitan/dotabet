@@ -297,7 +297,7 @@ def merge_fetched_data(tmp_file, file_to_merge):
         else:
             filtered_data_tmp.append(match_tmp)
 
-    assert filtered_data_tmp[0] not in mids1, "For some reasons, the buffer tmp match was previously merged into files"
+    assert filtered_data_tmp[0]['match_id'] not in mids1, "For some reasons, the buffer tmp match was previously merged into files"
     with open(file_to_merge, 'w') as file:
         json.dump(data1 + [filtered_data_tmp[0]] + filtered_data_tmp[2:], file, separators=(',', ':'))
     
