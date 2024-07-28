@@ -5,6 +5,7 @@ import json
 import csv
 import shutil
 import dotabet
+from datetime import datetime
 
 class PlayerRankLess80Error(Exception):
     """Exception raised for invalid player names."""
@@ -78,42 +79,58 @@ def get_league_name(id):
 
 
 ############### PLAYERS ####################
-player_mapping_file = os.path.join(PROJECT_ROOT, 'constants', "player_mapping.yaml")
+player_mapping_file = r"D:\WORKSPACE\dotabet\constants\player_mapping.yaml"
 
-def get_player_name(id):
-    if not hasattr(get_player_name, "player_id2name"):
-        with open(player_mapping_file, "r") as file:
-            player_name2id = yaml.safe_load(file)
-        get_player_name.player_id2name = {player_id: name for name, player_id in player_name2id.items()}
+class PlayerNameManager:
+    def __init__(self):
+        self.yaml_file = player_mapping_file
+        self._load_accounts()
+
+    def _load_accounts(self):
+        try:
+            with open(self.yaml_file, 'r') as file:
+                self.accounts = yaml.safe_load(file) or {}
+                self.accounts_by_id = {v: k for k, v in self.accounts.items()}
+        except FileNotFoundError:
+            self.accounts = {}
+            self.accounts_by_id = {}
+
+    def _save_accounts(self):
+        with open(self.yaml_file, 'w') as file:
+            yaml.safe_dump(self.accounts, file)
+
+    def get_player_name(self, account_id):
+        if account_id in self.accounts_by_id:
+            return self.accounts_by_id[account_id]
         
-    name = get_player_name.player_id2name.get(id, None)
-    if name:
-        return name
-    else:
-        player_name = fetch_player_name(id)
-        if player_name:
-            player_name = format_player_name(player_name)
-        if not player_name or len(player_name)<=2:
-            player_name = "noname" + str(id)
-        get_player_name.player_id2name[id] = player_name
-        with open(player_mapping_file, "r") as file:
-            player_name2id = yaml.safe_load(file)
-            player_name2id[player_name] = int(id)
-        with open(player_mapping_file, 'w') as file:
-                yaml.safe_dump(player_name2id, file)
-        print(f"No name found for {id=}. 💻 API parse..⌛ {player_name=}")
-        return player_name
+
+        # If account_id is not present, call GET_NAME and update the YAML file
+        new_name = format_player_name(fetch_player_name(account_id))
+        while new_name in self.accounts:
+            new_name += '_2'
+        self.accounts[new_name] = account_id
+        self.accounts_by_id[account_id] = new_name
+        self._save_accounts()
+        return new_name
+
 
 def fetch_player_name(player_id):
     response = requests.get(f"https://api.opendota.com/api/players/{player_id}")
     if response.status_code == 200:
             data = response.json()
             
-            if not data['rank_tier']:
-                print(f"⚠️ {player_id=} has no rank")
-            elif data['rank_tier'] < 80:
-                raise PlayerRankLess80Error(data['profile']['personaname'], f"❌ {player_id=} rank less than 80 : rank={data['rank_tier']}") 
-            return data['profile']['personaname']
+            if not data['rank_tier'] or data['rank_tier'] < 80:
+                top_team_ids = get_teams_ids(r"D:\WORKSPACE\dotabet\constants\teams.csv", top_teams=True)
+                print(f"⚠️ {player_id=} has no rank={data['rank_tier']}")
+                if player_id in top_team_ids:
+                    raise ValueError(f"dotabet/utils/fetch_player_name: TOP player has rank <80")
+
+            if data['profile']['name']:
+                return data['profile']['name']
+            elif data['profile']['personaname']:
+                return data['profile']['personaname']
+            else:
+                return f"nodata_{player_id}"
             
 
 def fetch_league_name(league_id):
@@ -222,7 +239,9 @@ def get_merged_data(file_paths):
             combined_data.extend(data)
     return combined_data
 
-def get_teams_ids(teams_csv_path, top_teams=False, return_as_dict_with_top=False):
+def get_teams_ids(teams_csv_path=None, top_teams=False, return_as_dict_with_top=False):
+    if not teams_csv_path:
+        teams_csv_path = r"D:\WORKSPACE\dotabet\constants\teams.csv"
     team_ids = set()
     team_ids_top = {}
     with open(teams_csv_path, 'r', newline='') as csvfile:

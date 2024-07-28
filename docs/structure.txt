@@ -1,0 +1,88 @@
+STEP1.
+
+INPUT:
+"D:\WORKSPACE\dotabet\data\1pro_games_1.json"
+"D:\WORKSPACE\dotabet\data\1pro_games_2.json"
+
++ filter by top teams from constants/teams.csv (top==1)
+dotabet.filter.filter_top_teams(input_files, teams_csv_path, pro_games_json_path) 
+
+OUTPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\1pro_games.json"
+
+STEP2.
+INPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\1pro_games.json"
+
++ select relevant columns.
++ player_team_id
++ player_team_name
++ missing_data
++ skip non 5x5 matches
+dotabet.make_csv.make_csv(pro_games_json_path, all_player_csv_path) 
+
+OUTPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\all_players.csv"
+
+STEP3.
+INPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\all_players.csv"
+
++ keep rows with pro players ONLY (including old team composition)
++ add 'minutes'
++ drop nan everywhere
++ drop too_high_first
++ drop non-monotonic
++ drop less15 and more60 minutes
++ sort by start_time
+
+dotabet.cleanup.clean(all_player_csv_path, all_player_clean_csv_path, teams_csv_path) 
+
+OUTPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\all_players_clean.csv"
+
+STEP4.
+INPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\all_players_clean.csv"
+
++ add gpm10, xp10, lh10 etc
++ add team_composition
++ add team_composition_id
++ add teams_matchup_id
++ add player_position (based on teams.csv order)
+
+OUTPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\features.csv"
+
+--------------------------------------------------
+
+STEP5G. OVERALL TEAMS PERFORAMNCES
+INPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\features.csv"
+
++ aggregate by ['team_composition_id', 'win']
++ int & float columns -> 'mean'
++ str columns -> column[0]
++ add 'match_count'
++ if True, filter only current teams
+
+OUTPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\composed_teams.csv"
+
+--------------------------------------------------
+
+STEP 5CS.
+INPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\features.csv"
+
++ make historical moving averages
++ can be over team_composition_id or player's account_id
++ if teams_csv, filter only current ids (team or account)
+
+OUTPUT:
+"D:\WORKSPACE\dotabet\data\top_teams\cumsum\by_team_composition_id_window2_step2.csv"
+
+
+
+
+

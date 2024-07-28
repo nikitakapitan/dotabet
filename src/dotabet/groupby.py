@@ -83,13 +83,14 @@ def groupby_account(features_csv_path, teams_csv_path=None):
     print(f"Created: {new_filename}")
 
 def _groupby_account(df):
-    df = df[['account_id', 'player_name'] + ['win', 'team_composition', 'team_composition_id'] + numeric_features]
+    # keep these columns:
+    df = df[['account_id', 'player_name', 'player_position'] + ['win'] + numeric_features]
 
     str_agg = lambda x: x.mode()[0] if not x.empty else None
     agg_dict = {col: 'mean' for col in df.select_dtypes(include=['int', 'float']).columns}  
     agg_dict.update({col: str_agg for col in df.select_dtypes(include=['object']).columns}) 
 
-    accountsgr = df.groupby(['account_id', 'team_composition_id', 'win'])
+    accountsgr = df.groupby(['account_id', 'win'])
     players = accountsgr.agg(agg_dict)
     players.insert(loc=0, column='match_count', value=accountsgr.size()) 
 

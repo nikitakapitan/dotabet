@@ -5,7 +5,7 @@ import datetime
 from pathlib import Path
 import yaml
 import dotabet
-from dotabet.utils import PlayerRankLess80Error
+from dotabet.utils import PlayerRankLess80Error, PlayerNameManager
 
 default_player_values = {'account_id': None, 'actions_per_min': None, 'ancient_kills': None, 'assists': None,
                   'camps_stacked': None, 'deaths': None, 'denies': None, 'gold_per_min': None,
@@ -26,7 +26,7 @@ with open(r"D:\WORKSPACE\dotabet\constants\teams.csv", 'r', encoding='utf-8') as
         if int(row['top']) == 1:
             top_team_ids.append(int(row['team_id']))
 
-def append_all_players_data(players_data, match_data, all_players_csv_path):
+def append_all_players_data(players_data, match_data, all_players_csv_path, name_manager):
     if len(players_data) != 10:
         return 1
     for player_data in players_data:
@@ -40,6 +40,7 @@ def append_all_players_data(players_data, match_data, all_players_csv_path):
                       'match_id',
                       'leagueid',
                       'player_team_id', 
+                      'player_is_radiant',
                       'radiant_team_id', 
                       'dire_team_id',     
                       ]+\
@@ -50,15 +51,8 @@ def append_all_players_data(players_data, match_data, all_players_csv_path):
                     'radiant_win',]
 
         league_name = dotabet.utils.get_league_name(match_data['leagueid'])
-        try:
-            player_name = dotabet.utils.get_player_name(player_data['account_id'])
-        except PlayerRankLess80Error as e:
-            if match_data['radiant_team_id'] in top_team_ids and match_data['dire_team_id'] in top_team_ids:
-                print("make_csv.py: 🚧🚨⚠️🚨🚧" + str(e) + ".\n\t" + f"match_id={match_data['match_id']}\n\t radiant={match_data['radiant_name']}\
-                 ({match_data['radiant_team_id']}) dire={match_data['dire_name']}(({match_data['dire_team_id']}))\n\t {league_name=} 🚧🚧🚧")
-            else:
-                print(f"Non-top player has rank <80")
-            player_name = e.name
+
+        player_name = name_manager.get_player_name(player_data['account_id'])
         
         row_data = {'player_name' : player_name,
                     'league_name' : league_name,
@@ -76,9 +70,11 @@ def append_all_players_data(players_data, match_data, all_players_csv_path):
             if row_data[key] == default_player_values[key]:  # Check if data is missing
                 missing_data = True
         if player_data['win'] == match_data['radiant_win']: # player is radiant
+            row_data['player_is_radiant'] = True
             row_data['player_team_id'] = match_data['radiant_team_id']
             row_data['player_team_name'] = match_data['radiant_name']
         else:
+            row_data['player_is_radiant'] = False
             row_data['player_team_id'] = match_data['dire_team_id']
             row_data['player_team_name'] = match_data['dire_name']
         row_data['missing_data'] = 1 if missing_data else 0
@@ -104,8 +100,9 @@ def make_csv(input_file_path, output_file_path):
         matches = json.load(file)
 
     skip = 0
+    name_manager = PlayerNameManager()
     for match in matches:    
-        skip+=append_all_players_data(match['players'], match, all_players_csv_path)
+        skip+=append_all_players_data(match['players'], match, all_players_csv_path, name_manager)
         
     print(f"✅csv.py: Skipped {skip} matches. Total of {len(matches)-skip} cast to CSV {output_file_path}")
 

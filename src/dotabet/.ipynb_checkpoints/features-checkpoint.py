@@ -77,6 +77,8 @@ def find_player_position(account_id, player_team_id):
     
     return account_id # "No Up to Date Player" # this player doesn't currently play in the team
 
+
+
 def make_features(input_file_path, output_file_path):
 
     df= pd.read_csv(input_file_path)

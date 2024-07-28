@@ -1,1 +1,1 @@
-from dotabet.vizual import vizual_cumsum
+from dotabet.vizual import timeline

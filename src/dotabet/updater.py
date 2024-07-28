@@ -1,16 +1,28 @@
 import pandas as pd
 from dotabet import utils
+from datetime import datetime
 
-def process_team_compositions(features_csv_path, teams_csv_path):
+timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M")
+
+def log_message(message):
+    log_entry = f'{timestamp}: "{message}"'
+    with open("D:\WORKSPACE\dotabet\constants\logs.txt", "a", encoding='utf-8') as log_file:
+        log_file.write(log_entry + "\n")
+    print(log_entry)
+
+def update_teams_csv(features_csv_path, teams_csv_path):
     # Load data
     features_df = pd.read_csv(features_csv_path)
     teams_df = pd.read_csv(teams_csv_path)
-    teams_df = teams_df[teams_df['top'] == 1]
+    teams_df.to_csv(fr"D:\WORKSPACE\dotabet\constants\backup\teams_{timestamp}.csv", index=False)
     int_cols = ['Pos1ID', 'Pos2ID', 'Pos3ID', 'Pos4ID', 'Pos5ID', 'team_composition_id']
     teams_df[int_cols] = teams_df[int_cols].astype('Int64')
+    
+    top_teams_df = teams_df[teams_df['top'] == 1]
+    problem = False
 
     
-    for _, team_row in teams_df.iterrows():
+    for _, team_row in top_teams_df.iterrows():
         team_id = team_row['team_id']
         team_composition_id = team_row['team_composition_id']
         team_csv_player_ids = {
@@ -46,29 +58,39 @@ def process_team_compositions(features_csv_path, teams_csv_path):
             # Check differences
             team_csv_player_ids_set = set(team_csv_player_ids.values())
             diff_ids = team_csv_player_ids_set.symmetric_difference(features_player_ids)
-            print(f"DEBUG {diff_ids=} and {len(diff_ids)=}")
+            assert len(diff_ids) >= 2, "dotabet/updater: team_composition_id are different, but players are all the same"
             
             if len(diff_ids) == 2:
                 active_id = list(features_player_ids - team_csv_player_ids_set).pop()
                 inactive_id = list(team_csv_player_ids_set - features_player_ids).pop()
                 pos_to_update = list(team_csv_player_ids.values()).index(inactive_id) + 1  # +1 to match Pos{x}ID format
                 pos_to_update_str = f'Pos{pos_to_update}ID'
-                teams_df.loc[teams_df['team_id'] == team_id, pos_to_update_str] = active_id
-                teams_df.loc[teams_df['team_id'] == team_id, f'Pos{pos_to_update}'] = utils.fetch_player_name(active_id)
-                print(f"Updated {pos_to_update_str} for team {team_id} with account_id {active_id} and name {utils.fetch_player_name(active_id)}")
+                top_teams_df.loc[top_teams_df['team_id'] == team_id, pos_to_update_str] = active_id
+                top_teams_df.loc[top_teams_df['team_id'] == team_id, 'team_composition_id'] = computed_team_composition_id
+                top_teams_df.loc[top_teams_df['team_id'] == team_id, f'Pos{pos_to_update}'] = utils.fetch_player_name(active_id)
+                log_message(f"🔄✔️Updated {pos_to_update_str} for team {team_row['team_name']}({team_id}) with player {utils.fetch_player_name(active_id)}({active_id}). \
+                {team_composition_id=} -> {computed_team_composition_id=}")
 
             else:
+                problem = True
                 current_ids = team_csv_player_ids_set - features_player_ids
                 new_ids = features_player_ids - team_csv_player_ids_set
                 current_info = [(name, val) for name, val in team_csv_player_ids.items() if val in current_ids]
-                new_info = [(recent_match_players[recent_match_players['account_id'] == val]['player_name'].values[0], val) for val in new_ids]
+                new_info = [(utils.fetch_player_name(val), val) for val in new_ids]
 
-                print(f"Multiple differences found for team {team_row['team_name']} {team_id=}:")
+                log_message(f"⚠️ Multiple differences found for team {team_row['team_name']} {team_id=}. Manual update is required")
                 print(f"Present in teams.csv but not in features: {current_info}🔚")
                 print(f"Present in features but not in teams.csv: {new_info}🆕")
-
-        else:
-            print(f"{team_row['team_name']}✅")
+            
+    teams_df.update(top_teams_df)
+    teams_df.to_csv(teams_csv_path, index=False)
     
-    # Save updated teams dataframe
-    teams_df.to_csv(r"D:\WORKSPACE\dotabet\constants\teams_upd.csv", index=False)
+    if not problem:
+        log_message(f"teams.csv is Up To Date ✅✅✅")
+    else:
+        print(f"⚠️ Update manually teams.csv with info above ⬆️")
+
+    
+
+
+    

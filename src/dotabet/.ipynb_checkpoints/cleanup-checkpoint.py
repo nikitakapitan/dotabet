@@ -115,6 +115,20 @@ def get_match_minutes(element):
     else:
         return 0
 
+def check_team_name_duplicates(df):
+
+    # Find the most recent 'player_team_name' for each 'player_team_id'
+    most_recent_name = df.drop_duplicates('player_team_id').set_index('player_team_id')['player_team_name'].to_dict()
+
+    # Check and correct discrepancies
+    for player_team_id in df['player_team_id'].unique():
+        unique_names = df[df['player_team_id'] == player_team_id]['player_team_name'].unique()
+        if len(unique_names) > 1:
+            print(f"⚠️Two different names fo {player_team_id=}: {unique_names}. Keep only {most_recent_name[player_team_id]}!")
+            df.loc[df['player_team_id'] == player_team_id, 'player_team_name'] = most_recent_name[player_team_id]
+
+    return df
+
 
 ##### main 2 level clean function #####
 def clean(all_player_csv_path, all_player_clean_csv_path, teams_csv_path):
@@ -143,6 +157,7 @@ def clean(all_player_csv_path, all_player_clean_csv_path, teams_csv_path):
     df_cleaned = df[~df['match_id'].isin(invalid_match_ids)]
     print(f"FINAL NUMBER OF MATCHES: {df_cleaned['match_id'].nunique()}")
     df_cleaned = df_cleaned.sort_values(by='start_time', ascending=False)
+    df_cleaned = check_team_name_duplicates(df_cleaned)
 
     with open("invalid_match_ids.json", "w") as file:
             json.dump(clean_details, file)
