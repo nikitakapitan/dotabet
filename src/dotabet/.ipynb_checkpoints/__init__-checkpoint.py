@@ -25,4 +25,6 @@ all_player_clean_csv_path = r"D:\WORKSPACE\dotabet\data\top_teams\all_players_cl
 features_csv_path = r"D:\WORKSPACE\dotabet\data\top_teams\features.csv"
 teams_csv_path = r"D:\WORKSPACE\dotabet\constants\teams.csv"
 
-train_path = r"D:\WORKSPACE\dotabet\data\train\matches.csv"
+# training
+train_matches_path = r"D:\WORKSPACE\dotabet\data\train\matches.csv"
+train_diff_path = r"D:\WORKSPACE\dotabet\data\train\diffs.csv"

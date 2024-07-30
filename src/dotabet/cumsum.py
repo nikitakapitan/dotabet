@@ -13,21 +13,22 @@ def make_cumsum(features_csv_path, by, teams_csv_path=None, window_months=9, ste
     if teams_csv_path: filter df by ids from the csv only
     """
     if by == 'team_composition_id':
-        current_ids = dotabet.utils.get_teams_composition_ids(teams_csv_path, top=True)
+        if teams_csv_path:
+            current_ids = dotabet.utils.get_teams_composition_ids(teams_csv_path, top=True)
         groupby_func = dotabet.groupby._groupby_team_composition
     elif by == 'account_id':
-        current_ids = dotabet.utils.get_account_ids(teams_csv_path)
+        if teams_csv_path:
+            current_ids = dotabet.utils.get_account_ids(teams_csv_path)
         groupby_func = dotabet.groupby._groupby_account
     
     df = pd.read_csv(features_csv_path)
     df[by] = df[by].astype(int)
-    print(f"cumsum.py INFO: {len(current_ids)=}")
-    print(f"cumsum.py INFO: <Initial> {df[by].nunique()=}")
+
+    print(f"cumsum.py INFO: <Initial> {df[by].nunique()=} {len(df)=}")
     if teams_csv_path: 
         df = df[df[by].isin(current_ids)]
-    print(f"cumsum.py INFO: <Current ids> {df[by].nunique()=}")
-    # assert set(current_ids) == set(df[by].unique()), f"{set(current_ids)=} <<>> {set(df[by].unique())=}"
-    
+    print(f"cumsum.py INFO: <Filtred ids> {df[by].nunique()=} {len(df)=}")
+
     df['start_time'] = pd.to_datetime(df['start_time'])
     df.sort_values('start_time', inplace=True)
     
