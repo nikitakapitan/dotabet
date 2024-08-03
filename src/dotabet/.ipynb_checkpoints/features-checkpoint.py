@@ -82,6 +82,8 @@ def find_player_position(account_id, player_team_id):
 def make_features(input_file_path, output_file_path):
 
     df= pd.read_csv(input_file_path)
+    df['account_id'] = df['account_id'].astype(int)
+    df['deaths'] = df['deaths'] * (-1)
     
     df = process_time_series(df)
     df['player_position'] = df.apply(lambda row: find_player_position(row['account_id'], row['player_team_id']), axis=1).astype(int)

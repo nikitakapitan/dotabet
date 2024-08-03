@@ -239,11 +239,10 @@ def get_merged_data(file_paths):
             combined_data.extend(data)
     return combined_data
 
-def get_teams_ids(teams_csv_path=None, top_teams=False, return_as_dict_with_top=False):
+def get_teams_ids(teams_csv_path=None, top_teams=False):
     if not teams_csv_path:
         teams_csv_path = r"D:\WORKSPACE\dotabet\constants\teams.csv"
     team_ids = set()
-    team_ids_top = {}
     with open(teams_csv_path, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
@@ -251,9 +250,8 @@ def get_teams_ids(teams_csv_path=None, top_teams=False, return_as_dict_with_top=
                 continue
             team_id = int(row['team_id'])
             team_ids.add(team_id)
-            team_ids_top[team_id] = bool(int(row['top']))
 
-    return team_ids_top if return_as_dict_with_top else team_ids
+    return team_ids
 
 def get_teams_composition_ids(teams_csv_path, top=False):
     team_ids = set()
