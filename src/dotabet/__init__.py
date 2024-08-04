@@ -15,8 +15,9 @@ except PackageNotFoundError:  # pragma: no cover
 finally:
     del version, PackageNotFoundError
 
-from dotabet import utils, filter, features, fetch, make_csv, cleanup, groupby, league, cumsum, transform, plot, checkout, vizual, train
-from dotabet.consistency import main
+from dotabet.data import filter, features, make_csv, cleanup, groupby, diff, cumsum
+from dotabet import utils, fetch, league, checkout, vizual
+from dotabet.data.consistency import main
 
 class NoDotabetData(Exception):
     pass
@@ -31,7 +32,10 @@ all_player_clean_csv_path = r"D:\WORKSPACE\dotabet\data\top_teams\all_players_cl
 features_csv_path = r"D:\WORKSPACE\dotabet\data\top_teams\features.csv"
 teams_csv_path = r"D:\WORKSPACE\dotabet\constants\teams.csv"
 
-# training
+# Train
+# Step5.
 train_matches_path = r"D:\WORKSPACE\dotabet\data\train\matches.csv"
+# Step 6.
 train_diff_path = r"D:\WORKSPACE\dotabet\data\train\diffs.csv"
 diff_scaler_path = r"D:\WORKSPACE\dotabet\data\train\diffs_scaler.pkl"
+diff_data_win_mean_path = r"D:\WORKSPACE\dotabet\data\train\diffs_data_win_means.pkl"

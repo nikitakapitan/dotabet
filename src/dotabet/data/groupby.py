@@ -86,8 +86,11 @@ def _groupby_account(df):
     # keep these columns:
     df = df[['account_id', 'player_name', 'player_position'] + ['win'] + numeric_features]
 
+    def exp_avg(series):
+        return series.ewm(span=len(series), adjust=False).mean().iloc[-1]
+
     str_agg = lambda x: x.mode()[0] if not x.empty else None
-    agg_dict = {col: 'mean' for col in df.select_dtypes(include=['int', 'float']).columns}  
+    agg_dict = {col: exp_avg for col in df.select_dtypes(include=['int', 'float']).columns}
     agg_dict.update({col: str_agg for col in df.select_dtypes(include=['object']).columns}) 
 
     accountsgr = df.groupby(['account_id', 'win'])

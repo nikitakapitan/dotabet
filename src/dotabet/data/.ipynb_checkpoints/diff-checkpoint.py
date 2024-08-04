@@ -44,7 +44,7 @@ def create_train_csv_from_input_files():
         for row in rows:
             writer.writerow(row)
 
-def compute_performance_diff():
+def compute_performance_diff(last_n_matches=40):
     matches_df = pd.read_csv(dotabet.train_matches_path)
     features_df = pd.read_csv(dotabet.features_csv_path)
     features_df['start_time'] = pd.to_datetime(features_df['start_time'])
@@ -77,7 +77,7 @@ def compute_performance_diff():
 
         # Get performances for Radiant players
         for player_id in radiant_players:
-            perf = dotabet.cumsum.make_player_cumsum(features_df, player_id, start_time, match_count=40)
+            perf = dotabet.cumsum.make_player_cumsum(features_df, player_id, start_time, match_count=last_n_matches)
             assert len(perf) <= 2, f"train.py: player perf has more than 2 rows (for win=0 and win=1) : {len(perf)=}"
             
             recent_win_perf = perf[perf['win'] == 1]
@@ -95,7 +95,7 @@ def compute_performance_diff():
 
         # Get performances for Dire players
         for player_id in dire_players:
-            perf = dotabet.cumsum.make_player_cumsum(features_df, player_id, start_time, match_count=40)
+            perf = dotabet.cumsum.make_player_cumsum(features_df, player_id, start_time, match_count=last_n_matches)
             assert len(perf) <= 2, f"train.py: player perf has more than 2 rows (for win=0 and win=1) : {len(perf)=}"
             
             recent_win_perf = perf[perf['win'] == 1]
@@ -151,14 +151,31 @@ def compute_performance_diff():
 
     
     result_df = pd.DataFrame(result_data)
-    # normalize
     info_columns = ['match_time', 'match_id', 'radiant_win', 'data_win']
-    numerical_data = result_df.drop(columns=info_columns)
-    user_info = result_df[['match_time', 'match_id', 'radiant_win', 'data_win']]
 
+    # 1. Substract data_win means
+    grouped_means = result_df.groupby(result_df['data_win']).mean()
+
+    user_info = result_df[info_columns]
+
+    def subtract_group_means(row, group_means):
+        return row - group_means.loc[row['data_win']]
+
+    numerical_data = result_df.apply(subtract_group_means, axis=1, group_means=grouped_means).drop(columns=info_columns)
+
+    # save data_win means
+    group_means_info = {
+        'group_means': grouped_means,
+        'columns': numerical_data.columns.tolist()
+    }
+    joblib.dump(group_means_info, dotabet.diff_data_win_mean_path)
+
+
+    # Normalize
     scaler = StandardScaler()
     standardized_data = scaler.fit_transform(numerical_data)
     standardized_df = pd.DataFrame(standardized_data, columns=numerical_data.columns)
+    # save scaler
     scaler_info = {
         'scaler': scaler,
         'columns': numerical_data.columns.tolist()
