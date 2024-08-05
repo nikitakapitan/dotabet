@@ -11,6 +11,5 @@ def evaluate_model(model, test_loader):
             total += targets.size(0)
             correct += (predicted == targets).sum().item()
     
-    accuracy = correct / total * 100
-    print(f'Accuracy: {accuracy:.2f}%')
+    accuracy = correct / total
     return accuracy

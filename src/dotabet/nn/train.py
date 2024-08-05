@@ -1,9 +1,22 @@
 import torch
 import torch.optim as optim
 import torch.nn as nn
+import matplotlib.pyplot as plt
+from dotabet.nn.vizual import plot_loss_curve
+import dotabet
 
-def train_model(model, train_loader, val_loader, optimizer, num_epochs, scheduler=None):
+def l1_penalty(model, l1_lambda):
+    l1_norm = sum(p.abs().sum() for p in model.parameters())
+    return l1_lambda * l1_norm
+
+def train_model(model, train_loader, val_loader, optimizer, num_epochs, scheduler=None, l1_lambda=None):
     criterion = nn.BCELoss()
+    train_losses = []
+    val_losses = []
+    val_acc = []
+    
+    
+    plt.ion()  # Turn on interactive mode for live updates
     
     for epoch in range(num_epochs):
         model.train()
@@ -12,6 +25,8 @@ def train_model(model, train_loader, val_loader, optimizer, num_epochs, schedule
             optimizer.zero_grad()
             outputs = model(inputs)
             loss = criterion(outputs.squeeze(), targets)
+            if l1_lambda:
+                loss += l1_penalty(model, l1_lambda)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
@@ -30,4 +45,13 @@ def train_model(model, train_loader, val_loader, optimizer, num_epochs, schedule
                 loss = criterion(outputs.squeeze(), targets)
                 val_loss += loss.item()
         
-        print(f'Epoch {epoch+1}/{num_epochs}, Training Loss: {running_loss/len(train_loader)}, Validation Loss: {val_loss/len(val_loader)}')
+        train_losses.append(running_loss / len(train_loader))
+        val_losses.append(val_loss / len(val_loader))
+        val_acc.append(dotabet.nn.test.evaluate_model(model, val_loader))
+        
+        if (epoch + 1) % 5 == 0 or epoch == num_epochs - 1:
+            plot_loss_curve(train_losses, val_losses, val_acc, epoch + 1)
+    
+    plt.ioff()  # Turn off interactive mode
+    return train_losses, val_losses, val_acc
+

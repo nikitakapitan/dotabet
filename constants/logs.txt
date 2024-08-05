@@ -4,3 +4,7 @@
 28_07_2024_15_48: "teams.csv is Up To Date ✅✅✅"
 28_07_2024_16_02: "teams.csv is Up To Date ✅✅✅"
 28_07_2024_18_28: "teams.csv is Up To Date ✅✅✅"
+04_08_2024_18_07: "🔄✔️Updated Pos3ID for team Natus Vincere(36) with player pma(835864135).                 team_composition_id=881243827 -> computed_team_composition_id=1600858807"
+04_08_2024_18_07: "⚠️ Multiple differences found for team Virtus.pro team_id=8724984. Manual update is required"
+04_08_2024_18_07: "⚠️ Multiple differences found for team Azure Ray team_id=8574561. Manual update is required"
+04_08_2024_18_07: "⚠️ Multiple differences found for team Nigma Galaxy team_id=7554697. Manual update is required"
