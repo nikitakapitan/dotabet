@@ -82,6 +82,16 @@ INPUT:
 OUTPUT:
 "D:\WORKSPACE\dotabet\data\top_teams\cumsum\by_team_composition_id_window2_step2.csv"
 
+---
+STEP6.
+
+...
+Conventions:
+> if player doesnt have any matches before start_time, compute mean on remaining 4 players
+> if 2 players do not have any matches before start_time, skip this data point
+
+...
+
 
 
 

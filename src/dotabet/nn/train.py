@@ -53,5 +53,7 @@ def train_model(model, train_loader, val_loader, optimizer, num_epochs, schedule
             plot_loss_curve(train_losses, val_losses, val_acc, epoch + 1)
     
     plt.ioff()  # Turn off interactive mode
+    print(f"Train Loss: {train_losses[-1]}. Val Loss: {val_losses[-1]}, Val Accuracy: {val_accs[-1]}")
+    dotabet.nn.utils.save_model(neural_network, dotabet.nn.config.neural_network_path)
     return train_losses, val_losses, val_acc
 

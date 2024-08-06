@@ -12,4 +12,5 @@ def evaluate_model(model, test_loader):
             correct += (predicted == targets).sum().item()
     
     accuracy = correct / total
+    print(f'Neural Network Model Test Accuracy: {accuracy:.4f}')
     return accuracy

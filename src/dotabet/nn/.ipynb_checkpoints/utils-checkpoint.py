@@ -1,4 +1,5 @@
 import torch.optim.lr_scheduler as lr_scheduler
+import torch
 
 def get_scheduler(optimizer, scheduler_type, scheduler_params):
     if scheduler_type == 'StepLR':
@@ -13,3 +14,13 @@ def get_scheduler(optimizer, scheduler_type, scheduler_params):
     # Add more scheduler types as needed
     else:
         raise ValueError(f"Unknown scheduler type: {scheduler_type}")
+
+def save_model(model, file_path):
+    torch.save(model, file_path)
+    print(f"torch nn.Module saved to {file_path}")
+
+def load_model(file_path):
+    model = torch.load(file_path)
+    model.eval()  # Set the model to evaluation mode
+    print(f"torch nn.Module loaded from {file_path}")
+    return model
