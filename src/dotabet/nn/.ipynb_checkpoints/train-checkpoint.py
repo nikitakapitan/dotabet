@@ -13,7 +13,7 @@ def train_model(model, train_loader, val_loader, optimizer, num_epochs, schedule
     criterion = nn.BCELoss()
     train_losses = []
     val_losses = []
-    val_acc = []
+    val_accs = []
     
     
     plt.ion()  # Turn on interactive mode for live updates
@@ -47,13 +47,13 @@ def train_model(model, train_loader, val_loader, optimizer, num_epochs, schedule
         
         train_losses.append(running_loss / len(train_loader))
         val_losses.append(val_loss / len(val_loader))
-        val_acc.append(dotabet.nn.test.evaluate_model(model, val_loader))
+        val_accs.append(dotabet.nn.test.evaluate_model(model, val_loader))
         
         if (epoch + 1) % 5 == 0 or epoch == num_epochs - 1:
-            plot_loss_curve(train_losses, val_losses, val_acc, epoch + 1)
+            plot_loss_curve(train_losses, val_losses, val_accs, epoch + 1)
     
     plt.ioff()  # Turn off interactive mode
     print(f"Train Loss: {train_losses[-1]}. Val Loss: {val_losses[-1]}, Val Accuracy: {val_accs[-1]}")
-    dotabet.nn.utils.save_model(neural_network, dotabet.nn.config.neural_network_path)
-    return train_losses, val_losses, val_acc
+    dotabet.nn.utils.save_model(model, dotabet.nn.config.neural_network_path)
+    return train_losses, val_losses, val_accs
 
