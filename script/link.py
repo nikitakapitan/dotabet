@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     # Dotabet_link
     link_token = '7074261020:AAG5hh_xsFvGXW7gBDnwH4ocwJzrmCGYSPY'
-    link_msg = link()
+    link_msg = link(api_pages=20)
     send_telegram_message(link_token, kapitan_chat_id, ''.join(link_msg))
     
     # dotabet_checkout_bot

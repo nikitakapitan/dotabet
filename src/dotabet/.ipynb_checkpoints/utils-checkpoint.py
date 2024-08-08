@@ -174,7 +174,8 @@ def cast_datetime_to_ymd(dt):
 
 def format_team_name(name):
     dct = {"g2.ig" : "g2 x ig",
-          "bb" : "betboom",}
+          "bb" : "betboom",
+          "blacklist rivalry" : "blacklist international"}
     if not name:
         return None
     name = name.lower()

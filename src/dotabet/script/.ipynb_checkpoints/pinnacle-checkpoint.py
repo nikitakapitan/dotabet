@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
@@ -77,9 +78,18 @@ def get_match_odds(block):
 def scrape_dota2_odds(debug=False):
     telegram_msg = []
     odds_file = r"D:\WORKSPACE\dotabet\data\odds\pinnacle.csv"
+
+    chrome_driver_path = r"D:\PROGRAMS\chromedriver-win64\chromedriver.exe" # Update this to your path
+    chrome_options = Options()
+    chrome_options.add_argument("--start-maximized")  # Start browser maximized
+    chrome_options.add_argument("--disable-infobars")  # Disables the "Chrome is being controlled by automated software" info bar
+    chrome_options.add_argument("--disable-extensions")  # Disables extensions
+    chrome_options.add_argument("--disable-gpu")  # Applicable to Windows OS only
+    chrome_options.add_argument("--no-sandbox")  # Bypass OS security model
+    # chrome_options.add_argument("--headless")  # Run browser in headless mode (without GUI)
+    driver = webdriver.Chrome(service=Service(chrome_driver_path), options=chrome_options)
     
-    
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    # driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
     driver.get("https://www.pinnacle.com/en/esports/games/dota-2/matchups")
     time.sleep(5) 
 
