@@ -10,6 +10,7 @@ import locale
 import csv
 import os
 import dotabet
+from dotabet.script.possibilities import possibilities
 
 def data_exists_in_csv(filename, data):
     with open(filename, mode='r', newline='') as file:
@@ -48,8 +49,8 @@ def get_date_ymd(block):
         print(f"Casting {date} -> {date_ymd}") 
     return date_ymd
 
-def get_match_odds(block):
-    participants = block.find_elements(By.CSS_SELECTOR, "div.style_gameInfoLabel__2m_fI > span")
+def get_match_odds(block, html_names):
+    participants = block.find_elements(By.CSS_SELECTOR, html_names['game_info'])
     team_names = [p.text for p in participants if '(Match)' in p.text or '(Map 1)' in p.text]
     for p in participants:
         if '(Match)' in p.text:
@@ -58,11 +59,11 @@ def get_match_odds(block):
             odd_type = '(Map 1)' 
 
     if team_names:
-        money_line_buttons = block.find_elements(By.CSS_SELECTOR, "div.style_moneyline__2xTld > div > button")
+        money_line_buttons = block.find_elements(By.CSS_SELECTOR, html_names['button'])
         odds = []
         for btn in money_line_buttons:
             try:
-                price_span = btn.find_element(By.CSS_SELECTOR, "span.style_price__3Haa9")
+                price_span = btn.find_element(By.CSS_SELECTOR, html_names['price'])
                 odds.append(price_span.text)
             except NoSuchElementException:
                 odds.append(None)
@@ -94,23 +95,28 @@ def scrape_dota2_odds(debug=False):
     time.sleep(5) 
 
     square = driver.find_element(By.CSS_SELECTOR, "div.contentBlock.square > div.contentBlock.square")
-    content_blocks = square.find_elements(By.CSS_SELECTOR, "div[class^='style_']")
-
-    attributes = ['style_dateBar__1adEH', 'style_row__yBzX8 style_row__3l5MS', 'style_row__yBzX8 style_row__12oAB']
-    content_blocks = [cb for cb in content_blocks if cb.get_attribute("class") in attributes]
-    n = len(content_blocks)
+  
+    current_html_names = {}
+    for possible_html_name in possibilities:
+        content_blocks_all = square.find_elements(By.CSS_SELECTOR, possible_html_name['html_class_name'])
+        content_blocks = [cb for cb in content_blocks_all if cb.get_attribute("class") in possible_html_name['attributes'].values()]
+        n = len(content_blocks)
+        if content_blocks:
+            print("HTML MATCH!")
+            current_html_names = possible_html_name
+            break
 
     for i, block in enumerate(content_blocks):
-        if block.get_attribute("class") == 'style_dateBar__1adEH': # TODAY, TOMMOROW or DATE
+        if block.get_attribute("class") == current_html_names['attributes']['date']: # TODAY, TOMMOROW or DATE
             date_ymd = get_date_ymd(block)
             print(f"block[{i}/{n}]=Match_date: {date_ymd}")
             continue
-        elif block.get_attribute("class") == "style_row__yBzX8 style_row__3l5MS": # LEAGUE NAME
-            league_name = block.find_element(By.CSS_SELECTOR, "div.style_metadata__3MrIC > a > span").text
+        elif block.get_attribute("class") == current_html_names['attributes']['league']: # LEAGUE NAME
+            league_name = block.find_element(By.CSS_SELECTOR, current_html_names['attributes']['league_name']).text
             print(f"block[{i}/{n}]=League_name: {league_name}")
             continue
-        elif block.get_attribute("class") == "style_row__yBzX8 style_row__12oAB": # MATCH ODDS
-            odd_data = get_match_odds(block)
+        elif block.get_attribute("class") == current_html_names['attributes']['match']: # MATCH ODDS
+            odd_data = get_match_odds(block, html_names=current_html_names['get_match_odds'])
             if odd_data and odd_data[1]: # (Match) or (Map 1) and non-empty
                 data = [date_ymd, league_name] + odd_data + [None, None] # None for eloc1, eloc2 to pinnacle.csv
                 if append_to_csv(odds_file, data):
